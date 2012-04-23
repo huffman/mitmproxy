@@ -6,6 +6,7 @@ import lxml.html, lxml.etree
 import common
 from .. import utils, encoding, flow
 from ..contrib import jsbeautifier
+import os;
 
 VIEW_CUTOFF = 1024*50
 
@@ -19,6 +20,7 @@ VIEW_IMAGE = 6
 VIEW_RAW = 7
 VIEW_HEX = 8
 VIEW_HTML = 9
+VIEW_PLIST = 10
 
 VIEW_NAMES = {
     VIEW_AUTO: "Auto",
@@ -31,6 +33,7 @@ VIEW_NAMES = {
     VIEW_RAW: "Raw",
     VIEW_HEX: "Hex",
     VIEW_HTML: "HTML",
+    VIEW_PLIST: "Plist",
 }
 
 
@@ -45,6 +48,7 @@ VIEW_PROMPT = (
     ("multipart", "m"),
     ("urlencoded", "u"),
     ("xml", "x"),
+    ("plist", "p"),
 )
 
 VIEW_SHORTCUTS = {
@@ -58,6 +62,7 @@ VIEW_SHORTCUTS = {
     "m": VIEW_MULTIPART,
     "r": VIEW_RAW,
     "e": VIEW_HEX,
+    "p": VIEW_PLIST,
 }
 
 CONTENT_TYPES_MAP = {
@@ -74,6 +79,7 @@ CONTENT_TYPES_MAP = {
     "image/gif": VIEW_IMAGE,
     "image/vnd.microsoft.icon": VIEW_IMAGE,
     "image/x-icon": VIEW_IMAGE,
+    "application/x-plist": VIEW_PLIST,
 }
 
 def trailer(clen, txt, limit):
@@ -121,6 +127,20 @@ def view_hex(hdrs, content, limit):
         ]))
     trailer(len(content), txt, limit)
     return "Hex", txt
+
+
+def view_plist(hdrs, content, limit):
+    cmd = 'plutil -convert xml1 - -o -';
+    (c_stdin, c_stdout) = os.popen2(cmd);
+
+    c_stdin.write(content)
+    c_stdin.close()
+
+    plist_content = c_stdout.read()
+
+    (_, txt) = view_xml(hdrs, plist_content, limit)
+
+    return "Plist", txt
 
 
 def view_xml(hdrs, content, limit):
@@ -288,6 +308,7 @@ PRETTY_FUNCTION_MAP = {
     VIEW_IMAGE: view_image,
     VIEW_HEX: view_hex,
     VIEW_RAW: view_raw,
+    VIEW_PLIST: view_plist,
 }
 
 def get_view_func(viewmode, hdrs, content):
